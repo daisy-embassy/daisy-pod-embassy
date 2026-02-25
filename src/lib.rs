@@ -36,3 +36,5 @@ compile_error!(
 );
 
 pub use daisy_embassy;
+
+pub mod peri;
