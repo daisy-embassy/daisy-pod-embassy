@@ -4,6 +4,76 @@ use daisy_embassy::hal::adc::Adc;
 use daisy_embassy::hal::peripherals::{ADC1, ADC2, USART1, USB_OTG_HS};
 use daisy_embassy::pins::*;
 
+pub struct DaisyPodPeripherals<'a> {
+    pub tact_switches: TactSwitches<'a>,
+    pub rgb_led1: RGBLed1<'a>,
+    pub rgb_led2: RGBLed2<'a>,
+    pub pot1: Pot1<'a>,
+    pub pot2: Pot2<'a>,
+    pub rotary_encoder: RotaryEncoder<'a>,
+    pub midi_jack: MidiJack<'a>,
+    pub usb_peri: UsbPeri<'a>,
+    pub expansion_pins: ExpansionPins<'a>,
+}
+
+impl<'a> DaisyPodPeripherals<'a> {
+    pub fn new(
+        board: daisy_embassy::DaisyBoard<'a>,
+        adc1: Adc<'a, ADC1>,
+        adc2: Adc<'a, ADC2>,
+        usart: USART1,
+        usp_peri: USB_OTG_HS,
+    ) -> Self {
+        let p = board.pins;
+        Self {
+            tact_switches: TactSwitches {
+                tac_switch_1: p.d27,
+                tac_switch_2: p.d28,
+            },
+            rgb_led1: RGBLed1 {
+                r: p.d20,
+                g: p.d19,
+                b: p.d18,
+            },
+            rgb_led2: RGBLed2 {
+                r: p.d17,
+                g: p.d24,
+                b: p.d23,
+            },
+            pot1: Pot1 {
+                pin: p.d21,
+                adc: adc1,
+            },
+            pot2: Pot2 {
+                pin: p.d15,
+                adc: adc2,
+            },
+            rotary_encoder: RotaryEncoder {
+                enc_a: p.d26,
+                enc_b: p.d25,
+                enc_click: p.d13,
+            },
+            midi_jack: MidiJack { pin: p.d14, usart },
+            usb_peri: UsbPeri {
+                usb_id: p.d0,
+                usb_d_plus: p.d30,
+                usb_d_minus: p.d29,
+                usb_peri: usp_peri,
+            },
+            expansion_pins: ExpansionPins {
+                d7: p.d7,
+                d8: p.d8,
+                d9: p.d9,
+                d10: p.d10,
+                d11: p.d11,
+                d12: p.d12,
+                d16: p.d16,
+                d22: p.d22,
+            },
+        }
+    }
+}
+
 pub struct TactSwitches<'a> {
     pub tac_switch_1: SeedPin27<'a>,
     pub tac_switch_2: SeedPin28<'a>,
