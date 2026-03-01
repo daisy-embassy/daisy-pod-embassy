@@ -16,14 +16,9 @@ pub struct RGBLed1<'a> {
 }
 
 pub struct RGBLed2<'a> {
-    pub r: SeedPin20<'a>,
-    pub g: SeedPin19<'a>,
-    pub b: SeedPin18<'a>,
-}
-
-pub struct Pot<Pin, Adc> {
-    pub pot_pin: Pin,
-    pub adc: Adc,
+    pub r: SeedPin17<'a>,
+    pub g: SeedPin24<'a>,
+    pub b: SeedPin23<'a>,
 }
 
 pub struct Pot1<'a> {
