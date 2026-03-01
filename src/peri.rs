@@ -48,3 +48,14 @@ pub struct UsbPeri<'a> {
     pub usb_d_minus: SeedPin29<'a>,
     pub usb_peri: USB_OTG_HS,
 }
+
+pub struct ExpansionPins<'a> {
+    pub d7: SeedPin7<'a>,
+    pub d8: SeedPin8<'a>,
+    pub d9: SeedPin9<'a>,
+    pub d10: SeedPin10<'a>,
+    pub d11: SeedPin11<'a>,
+    pub d12: SeedPin12<'a>,
+    pub d16: SeedPin16<'a>,
+    pub d22: SeedPin22<'a>,
+}
