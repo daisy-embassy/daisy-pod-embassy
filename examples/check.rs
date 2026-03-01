@@ -5,6 +5,7 @@
 
 use daisy_embassy::hal;
 use daisy_embassy::new_daisy_board;
+use daisy_pod_embassy::peri::DaisyPodPeripherals;
 use defmt::info;
 use embassy_executor::Spawner;
 use embassy_time::Timer;
@@ -16,7 +17,8 @@ async fn main(_spawner: Spawner) {
     let p = hal::init(Default::default());
     info!("Hello World!");
     let daisy_p = new_daisy_board!(p);
-    let mut led = daisy_p.user_led;
+    let pod_p = DaisyPodPeripherals::new(daisy_p, p.ADC1, p.ADC2, p.USART1, p.USB_OTG_HS);
+    let mut led = pod_p.user_led;
 
     loop {
         info!("on");

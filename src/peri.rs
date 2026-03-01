@@ -1,8 +1,13 @@
 //! https://daisy.audio/product/Daisy-Pod/#pinout
 
-use daisy_embassy::hal::adc::Adc;
+use daisy_embassy::audio::AudioPeripherals;
+use daisy_embassy::flash::FlashBuilder;
+use daisy_embassy::hal::Peri;
 use daisy_embassy::hal::peripherals::{ADC1, ADC2, USART1, USB_OTG_HS};
+use daisy_embassy::led::UserLed;
 use daisy_embassy::pins::*;
+use daisy_embassy::sdram::SdRamBuilder;
+use daisy_embassy::usb::UsbPeripherals;
 
 pub struct DaisyPodPeripherals<'a> {
     pub tact_switches: TactSwitches<'a>,
@@ -14,15 +19,22 @@ pub struct DaisyPodPeripherals<'a> {
     pub midi_jack: MidiJack<'a>,
     pub usb_peri: UsbPeri<'a>,
     pub expansion_pins: ExpansionPins<'a>,
+    pub user_led: UserLed<'a>,
+    pub audio_peripherals: AudioPeripherals<'a>,
+    pub flash: FlashBuilder<'a>,
+    pub sdram: SdRamBuilder<'a>,
+    pub usb_peripherals: UsbPeripherals<'a>,
+    // on board "BOOT" button.
+    pub boot: Boot<'a>,
 }
 
 impl<'a> DaisyPodPeripherals<'a> {
     pub fn new(
         board: daisy_embassy::DaisyBoard<'a>,
-        adc1: Adc<'a, ADC1>,
-        adc2: Adc<'a, ADC2>,
-        usart: USART1,
-        usp_peri: USB_OTG_HS,
+        adc1: Peri<'a, ADC1>,
+        adc2: Peri<'a, ADC2>,
+        usart: Peri<'a, USART1>,
+        usp_peri: Peri<'a, USB_OTG_HS>,
     ) -> Self {
         let p = board.pins;
         Self {
@@ -70,6 +82,12 @@ impl<'a> DaisyPodPeripherals<'a> {
                 d16: p.d16,
                 d22: p.d22,
             },
+            user_led: board.user_led,
+            audio_peripherals: board.audio_peripherals,
+            flash: board.flash,
+            sdram: board.sdram,
+            usb_peripherals: board.usb_peripherals,
+            boot: board.boot,
         }
     }
 }
@@ -93,12 +111,12 @@ pub struct RGBLed2<'a> {
 
 pub struct Pot1<'a> {
     pub pin: SeedPin21<'a>,
-    pub adc: Adc<'a, ADC1>,
+    pub adc: Peri<'a, ADC1>,
 }
 
 pub struct Pot2<'a> {
     pub pin: SeedPin15<'a>,
-    pub adc: Adc<'a, ADC2>,
+    pub adc: Peri<'a, ADC2>,
 }
 
 pub struct RotaryEncoder<'a> {
@@ -109,14 +127,14 @@ pub struct RotaryEncoder<'a> {
 
 pub struct MidiJack<'a> {
     pub pin: SeedPin14<'a>,
-    pub usart: USART1,
+    pub usart: Peri<'a, USART1>,
 }
 
 pub struct UsbPeri<'a> {
     pub usb_id: SeedPin0<'a>,
     pub usb_d_plus: SeedPin30<'a>,
     pub usb_d_minus: SeedPin29<'a>,
-    pub usb_peri: USB_OTG_HS,
+    pub usb_peri: Peri<'a, USB_OTG_HS>,
 }
 
 pub struct ExpansionPins<'a> {
