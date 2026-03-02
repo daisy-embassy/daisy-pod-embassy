@@ -3,6 +3,7 @@
 use daisy_embassy::audio::AudioPeripherals;
 use daisy_embassy::flash::FlashBuilder;
 use daisy_embassy::hal::Peri;
+use daisy_embassy::hal::adc::Adc;
 use daisy_embassy::hal::peripherals::{ADC1, ADC2, USART1, USB_OTG_HS};
 use daisy_embassy::led::UserLed;
 use daisy_embassy::pins::*;
@@ -54,11 +55,11 @@ impl<'a> DaisyPodPeripherals<'a> {
             },
             pot1: Pot1 {
                 pin: p.d21,
-                adc: adc1,
+                adc: Adc::new(adc1),
             },
             pot2: Pot2 {
                 pin: p.d15,
-                adc: adc2,
+                adc: Adc::new(adc2),
             },
             rotary_encoder: RotaryEncoder {
                 enc_a: p.d26,
@@ -111,12 +112,12 @@ pub struct RGBLed2<'a> {
 
 pub struct Pot1<'a> {
     pub pin: SeedPin21<'a>,
-    pub adc: Peri<'a, ADC1>,
+    pub adc: Adc<'a, ADC1>,
 }
 
 pub struct Pot2<'a> {
     pub pin: SeedPin15<'a>,
-    pub adc: Peri<'a, ADC2>,
+    pub adc: Adc<'a, ADC2>,
 }
 
 pub struct RotaryEncoder<'a> {
