@@ -35,7 +35,7 @@ impl<'a> DaisyPodPeripherals<'a> {
         adc1: Peri<'a, ADC1>,
         adc2: Peri<'a, ADC2>,
         usart: Peri<'a, USART1>,
-        usp_peri: Peri<'a, USB_OTG_HS>,
+        usb_peri: Peri<'a, USB_OTG_HS>,
     ) -> Self {
         let p = board.pins;
         Self {
@@ -71,7 +71,7 @@ impl<'a> DaisyPodPeripherals<'a> {
                 usb_id: p.d0,
                 usb_d_plus: p.d30,
                 usb_d_minus: p.d29,
-                usb_peri: usp_peri,
+                usb_peri,
             },
             expansion_pins: ExpansionPins {
                 d7: p.d7,
