@@ -155,6 +155,7 @@ dependencies = [
  "defmt-rtt",
  "embassy-executor",
  "embassy-time",
+ "grounded",
  "panic-probe",
 ]
 

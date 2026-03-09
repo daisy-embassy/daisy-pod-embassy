@@ -20,6 +20,7 @@ defmt-rtt = "1.0.0"
 panic-probe = { version = "1.0.0", features = ["print-defmt"] }
 embassy-executor = { version = "0.7.0", features = ["task-arena-size-32768", "arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
 embassy-time = { version = "0.5.0", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768", "generic-queue-8"] }
+grounded = "0.2.1"
 
 [patch.crates-io]
 daisy-embassy = { git = "https://github.com/daisy-embassy/daisy-embassy.git", rev = "dd7cc97857791451304ed34de9446e6ea8f78a1e" }
