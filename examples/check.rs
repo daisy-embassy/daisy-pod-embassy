@@ -14,7 +14,8 @@ use {defmt_rtt as _, panic_probe as _};
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
-    let p = hal::init(Default::default());
+    let rcc = daisy_embassy::default_rcc();
+    let p = hal::init(rcc);
     info!("Hello World!");
     let daisy_p = new_daisy_board!(p);
     let pod_p = DaisyPodPeripherals::new(daisy_p, p.ADC1, p.ADC2, p.USART1, p.USB_OTG_HS);
