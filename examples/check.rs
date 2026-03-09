@@ -50,8 +50,10 @@ async fn blinky(mut pin: UserLed<'static>) {
 }
 #[embassy_executor::task(pool_size = 2)]
 async fn tac_switch_task(mut pin: ExtiInput<'static, Async>, identifier: &'static str) -> ! {
+    let mut debounce = Ticker::every(Duration::from_millis(100));
     loop {
         pin.wait_for_low().await;
         info!("{} pressed", identifier);
+        debounce.next().await;
     }
 }
