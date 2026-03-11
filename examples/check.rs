@@ -7,6 +7,7 @@ use daisy_embassy::hal::adc::{AdcChannel as _, SampleTime};
 use daisy_embassy::hal::gpio::{Input, Level, Output, Pull, Speed};
 use daisy_embassy::hal::mode::Async;
 use daisy_embassy::hal::peripherals::{DMA2_CH0, DMA2_CH1};
+use daisy_embassy::hal::usart::{self, Uart, UartRx};
 use daisy_embassy::hal::{self, exti::ExtiInput};
 use daisy_embassy::hal::{Peri, bind_interrupts, dma, peripherals};
 use daisy_embassy::led::UserLed;
@@ -16,6 +17,7 @@ use defmt::info;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker, Timer};
 use grounded::uninit::GroundedArrayCell;
+use midly::{MidiMessage, live::LiveEvent, stream::MidiStream};
 
 use {defmt_rtt as _, panic_probe as _};
 
@@ -29,6 +31,9 @@ bind_interrupts!(
         EXTI15_10 => hal::exti::InterruptHandler<hal::interrupt::typelevel::EXTI15_10>;
         DMA2_STREAM0 => dma::InterruptHandler<peripherals::DMA2_CH0>;
         DMA2_STREAM1 => dma::InterruptHandler<peripherals::DMA2_CH1>;
+        DMA2_STREAM2 => dma::InterruptHandler<peripherals::DMA2_CH2>;
+        DMA2_STREAM3 => dma::InterruptHandler<peripherals::DMA2_CH3>;
+        USART1 => hal::usart::InterruptHandler<peripherals::USART1>;
 });
 
 #[embassy_executor::main]
@@ -72,6 +77,19 @@ async fn main(spawner: Spawner) {
         "rgb_led2",
         Duration::from_millis(700),
     ));
+
+    let mut config = usart::Config::default();
+    config.baudrate = 32_150; // MIDI baud rate
+    let uart = defmt::unwrap!(usart::Uart::new_half_duplex_on_rx(
+        pod_p.midi_jack.usart,
+        pod_p.midi_jack.pin,
+        p.DMA2_CH2,
+        p.DMA2_CH3,
+        Irqs,
+        config,
+        usart::HalfDuplexReadback::Readback,
+    ));
+    spawner.must_spawn(midi_task(uart));
 }
 
 #[embassy_executor::task]
@@ -221,4 +239,71 @@ async fn rotary_encoder_task(
             }
         }
     }
+}
+
+// The size of the TX/RX buffer.
+//
+// It's set to 1 byte to ensure immediate processing of MIDI messages.
+// However, I'm uncertain if this is the optimal size.
+// More efficient handling might be possible with.
+const BUFFER_SIZE: usize = 1;
+//DMA buffer must be in special region. Refer https://embassy.dev/book/#_stm32_bdma_only_working_out_of_some_ram_regions
+// #[link_section = ".sram1_bss"]
+// static TX_BUFFER: GroundedArrayCell<u8, SIZE> = GroundedArrayCell::uninit();
+#[unsafe(link_section = ".sram1_bss")]
+static RX_BUFFER: GroundedArrayCell<u8, BUFFER_SIZE> = GroundedArrayCell::uninit();
+
+#[embassy_executor::task]
+pub async fn midi_task(usart: Uart<'static, Async>) {
+    let (_tx, rx) = usart.split();
+    rx_task(rx).await;
+    // todo:
+    // tx_task(tx).await;
+}
+
+pub async fn rx_task(mut rx: UartRx<'static, Async>) -> ! {
+    // Create a MIDI stream to handle incoming MIDI messages
+    let mut midi_stream = MidiStream::new();
+
+    let buffer: &mut [u8] = unsafe {
+        RX_BUFFER.initialize_all_copied(0);
+        let (ptr, len) = RX_BUFFER.get_ptr_len();
+        core::slice::from_raw_parts_mut(ptr, len)
+    };
+
+    loop {
+        // Read bytes from the USART
+        if let Err(e) = rx.read(buffer).await {
+            // Handle read error (e.g., log it, retry, etc.)
+            defmt::error!("Failed to read from USART: {:?}", e);
+            continue;
+        }
+
+        // Handle the MIDI data received
+        handle_midi(&mut midi_stream, buffer);
+    }
+}
+
+fn handle_midi(stream: &mut MidiStream, new_bytes: &[u8]) {
+    stream.feed(new_bytes, |event| {
+        // `midly` will automatically parse boundaries and present
+        // parsed, zero-copy MIDI events here
+        match event {
+            // you can get at regular midi messages
+            LiveEvent::Midi {
+                channel,
+                message: MidiMessage::NoteOn { key, vel },
+            } => {
+                // Handle Note On event
+                // For example, you could print the key and velocity
+                defmt::info!(
+                    "Note event: channel={}, key={}, vel={}",
+                    channel.as_int(),
+                    key.as_int(),
+                    vel.as_int()
+                );
+            }
+            _ => info!("Unhandled MIDI event"),
+        }
+    });
 }

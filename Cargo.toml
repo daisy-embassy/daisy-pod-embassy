@@ -22,6 +22,7 @@ embassy-executor = { version = "0.7.0", features = ["task-arena-size-32768", "ar
 embassy-time = { version = "0.5.0", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768", "generic-queue-8"] }
 embassy-futures = { version = "0.1.1" }
 grounded = "0.2.1"
+midly = { version = "0.5.3", default-features = false }
 
 [patch.crates-io]
 daisy-embassy = { git = "https://github.com/daisy-embassy/daisy-embassy.git", rev = "dd7cc97857791451304ed34de9446e6ea8f78a1e" }
