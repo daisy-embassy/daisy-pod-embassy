@@ -4,7 +4,7 @@
 //! A test example to verify pin and peripheral functionality
 
 use daisy_embassy::hal::adc::{AdcChannel as _, SampleTime};
-use daisy_embassy::hal::gpio::{Level, Output, Pull, Speed};
+use daisy_embassy::hal::gpio::{Input, Level, Output, Pull, Speed};
 use daisy_embassy::hal::mode::Async;
 use daisy_embassy::hal::peripherals::{DMA2_CH0, DMA2_CH1};
 use daisy_embassy::hal::{self, exti::ExtiInput};
@@ -26,6 +26,7 @@ bind_interrupts!(
     pub struct Irqs{
         EXTI9_5 => hal::exti::InterruptHandler<hal::interrupt::typelevel::EXTI9_5>;
         EXTI2 => hal::exti::InterruptHandler<hal::interrupt::typelevel::EXTI2>;
+        EXTI15_10 => hal::exti::InterruptHandler<hal::interrupt::typelevel::EXTI15_10>;
         DMA2_STREAM0 => dma::InterruptHandler<peripherals::DMA2_CH0>;
         DMA2_STREAM1 => dma::InterruptHandler<peripherals::DMA2_CH1>;
 });
@@ -46,6 +47,12 @@ async fn main(spawner: Spawner) {
     spawner.must_spawn(tac_switch_task(button, "tac_2"));
     spawner.must_spawn(pot1_task(pod_p.pot1, p.DMA2_CH0));
     spawner.must_spawn(pot2_task(pod_p.pot2, p.DMA2_CH1));
+
+    let enc = pod_p.rotary_encoder;
+    let enc_a = ExtiInput::new(enc.enc_a, p.EXTI11, Pull::Up, Irqs);
+    let enc_b = Input::new(enc.enc_b, Pull::Up);
+    let enc_click = ExtiInput::new(enc.enc_click, p.EXTI6, Pull::Up, Irqs);
+    spawner.must_spawn(rotary_encoder_task(enc_a, enc_b, enc_click));
 
     // RGB LED1: 500ms per step
     let rgb1 = pod_p.rgb_led1;
@@ -180,5 +187,38 @@ async fn rgb_led_task(
         info!("{} combo {}: R={} G={} B={}", label, idx, r_on, g_on, b_on);
         idx = (idx + 1) % COMBOS.len();
         Timer::after(interval).await;
+    }
+}
+
+/// Detects rotary encoder rotation direction and button press.
+///
+/// Direction is decoded by sampling enc_b on every enc_a edge:
+///   enc_a != enc_b  →  clockwise
+///   enc_a == enc_b  →  counter-clockwise
+#[embassy_executor::task]
+async fn rotary_encoder_task(
+    mut enc_a: ExtiInput<'static, Async>,
+    enc_b: Input<'static>,
+    mut enc_click: ExtiInput<'static, Async>,
+) {
+    loop {
+        // Wait for either an enc_a edge or a button press.
+        // Both futures are polled; whichever resolves first is handled.
+        let a_edge = enc_a.wait_for_any_edge();
+        let click = enc_click.wait_for_falling_edge();
+        match embassy_futures::select::select(a_edge, click).await {
+            embassy_futures::select::Either::First(()) => {
+                let a = enc_a.is_high();
+                let b = enc_b.is_high();
+                if a != b {
+                    info!("rotary encoder: CW (clockwise)");
+                } else {
+                    info!("rotary encoder: CCW (counter-clockwise)");
+                }
+            }
+            embassy_futures::select::Either::Second(()) => {
+                info!("rotary encoder: click");
+            }
+        }
     }
 }
