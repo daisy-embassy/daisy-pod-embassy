@@ -4,7 +4,7 @@
 //! A test example to verify pin and peripheral functionality
 
 use daisy_embassy::hal::adc::{AdcChannel as _, SampleTime};
-use daisy_embassy::hal::gpio::Pull;
+use daisy_embassy::hal::gpio::{Level, Output, Pull, Speed};
 use daisy_embassy::hal::mode::Async;
 use daisy_embassy::hal::peripherals::{DMA2_CH0, DMA2_CH1};
 use daisy_embassy::hal::{self, exti::ExtiInput};
@@ -46,6 +46,25 @@ async fn main(spawner: Spawner) {
     spawner.must_spawn(tac_switch_task(button, "tac_2"));
     spawner.must_spawn(pot1_task(pod_p.pot1, p.DMA2_CH0));
     spawner.must_spawn(pot2_task(pod_p.pot2, p.DMA2_CH1));
+
+    // RGB LED1: 500ms per step
+    let rgb1 = pod_p.rgb_led1;
+    spawner.must_spawn(rgb_led_task(
+        Output::new(rgb1.r, Level::Low, Speed::Low),
+        Output::new(rgb1.g, Level::Low, Speed::Low),
+        Output::new(rgb1.b, Level::Low, Speed::Low),
+        "rgb_led1",
+        500,
+    ));
+    // RGB LED2: 700ms per step (offset timing so they differ visually)
+    let rgb2 = pod_p.rgb_led2;
+    spawner.must_spawn(rgb_led_task(
+        Output::new(rgb2.r, Level::Low, Speed::Low),
+        Output::new(rgb2.g, Level::Low, Speed::Low),
+        Output::new(rgb2.b, Level::Low, Speed::Low),
+        "rgb_led2",
+        700,
+    ));
 }
 
 #[embassy_executor::task]
@@ -124,5 +143,42 @@ async fn pot2_task(mut pot: Pot2<'static>, mut dma: Peri<'static, DMA2_CH1>) {
         info!("pot2 vrefint: {}", vrefint);
         info!("pot2 measured: {}", measured);
         Timer::after_millis(500).await;
+    }
+}
+
+/// Cycles through all 8 RGB on/off combinations to verify each LED colour works.
+/// The `interval_ms` argument controls how long each combination is held, allowing
+/// LED1 and LED2 to be driven at different speeds so they are visually distinct.
+///
+/// Combination order (R G B):
+///   0 = 000 (all off)  1 = 001 (B)   2 = 010 (G)   3 = 011 (cyan)
+///   4 = 100 (R)        5 = 101 (mag) 6 = 110 (yel)  7 = 111 (white)
+#[embassy_executor::task(pool_size = 2)]
+async fn rgb_led_task(
+    mut r: Output<'static>,
+    mut g: Output<'static>,
+    mut b: Output<'static>,
+    label: &'static str,
+    interval_ms: u64,
+) {
+    const COMBOS: [(bool, bool, bool); 8] = [
+        (false, false, false), // off
+        (false, false, true),  // B   – blue
+        (false, true, false),  // G   – green
+        (false, true, true),   // G+B – cyan
+        (true, false, false),  // R   – red
+        (true, false, true),   // R+B – magenta
+        (true, true, false),   // R+G – yellow
+        (true, true, true),    // all – white
+    ];
+    let mut idx: usize = 0;
+    loop {
+        let (r_on, g_on, b_on) = COMBOS[idx];
+        r.set_level(if r_on { Level::High } else { Level::Low });
+        g.set_level(if g_on { Level::High } else { Level::Low });
+        b.set_level(if b_on { Level::High } else { Level::Low });
+        info!("{} combo {}: R={} G={} B={}", label, idx, r_on, g_on, b_on);
+        idx = (idx + 1) % COMBOS.len();
+        Timer::after_millis(interval_ms).await;
     }
 }
