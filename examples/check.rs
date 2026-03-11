@@ -54,7 +54,7 @@ async fn main(spawner: Spawner) {
         Output::new(rgb1.g, Level::Low, Speed::Low),
         Output::new(rgb1.b, Level::Low, Speed::Low),
         "rgb_led1",
-        500,
+        Duration::from_micros(500),
     ));
     // RGB LED2: 700ms per step (offset timing so they differ visually)
     let rgb2 = pod_p.rgb_led2;
@@ -63,7 +63,7 @@ async fn main(spawner: Spawner) {
         Output::new(rgb2.g, Level::Low, Speed::Low),
         Output::new(rgb2.b, Level::Low, Speed::Low),
         "rgb_led2",
-        700,
+        Duration::from_millis(700),
     ));
 }
 
@@ -159,7 +159,7 @@ async fn rgb_led_task(
     mut g: Output<'static>,
     mut b: Output<'static>,
     label: &'static str,
-    interval_ms: u64,
+    interval: Duration,
 ) {
     const COMBOS: [(bool, bool, bool); 8] = [
         (false, false, false), // off
@@ -179,6 +179,6 @@ async fn rgb_led_task(
         b.set_level(if b_on { Level::High } else { Level::Low });
         info!("{} combo {}: R={} G={} B={}", label, idx, r_on, g_on, b_on);
         idx = (idx + 1) % COMBOS.len();
-        Timer::after_millis(interval_ms).await;
+        Timer::after(interval).await;
     }
 }
