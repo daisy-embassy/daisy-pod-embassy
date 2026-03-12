@@ -40,5 +40,5 @@ seed_1_2 = ["daisy-embassy/seed_1_2"]
 patch_sm = ["daisy-embassy/patch_sm"]
 
 [[example]]
-name = "check"
-path = "examples/check.rs"
+name = "peripheral_demo"
+path = "examples/peripheral_demo.rs"
