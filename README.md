@@ -9,5 +9,7 @@
 ## Run examples
 
 ```bash
+# Please choose features based on which board you have.
+cargo run --example=peripheral_demo --features=seed_1_2 --release
 cargo run --example=peripheral_demo --features=seed_1_1 --release
 ```
