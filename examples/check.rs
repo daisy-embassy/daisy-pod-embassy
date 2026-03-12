@@ -7,7 +7,7 @@ use daisy_embassy::hal::adc::{AdcChannel as _, SampleTime};
 use daisy_embassy::hal::gpio::{Input, Level, Output, Pull, Speed};
 use daisy_embassy::hal::mode::Async;
 use daisy_embassy::hal::peripherals::{DMA2_CH0, DMA2_CH1};
-use daisy_embassy::hal::usart::{self, Uart, UartRx};
+use daisy_embassy::hal::usart::{self, UartRx};
 use daisy_embassy::hal::{self, exti::ExtiInput};
 use daisy_embassy::hal::{Peri, bind_interrupts, dma, peripherals};
 use daisy_embassy::led::UserLed;
@@ -32,7 +32,6 @@ bind_interrupts!(
         DMA2_STREAM0 => dma::InterruptHandler<peripherals::DMA2_CH0>;
         DMA2_STREAM1 => dma::InterruptHandler<peripherals::DMA2_CH1>;
         DMA2_STREAM2 => dma::InterruptHandler<peripherals::DMA2_CH2>;
-        DMA2_STREAM3 => dma::InterruptHandler<peripherals::DMA2_CH3>;
         USART1 => hal::usart::InterruptHandler<peripherals::USART1>;
 });
 
@@ -80,14 +79,12 @@ async fn main(spawner: Spawner) {
 
     let mut config = usart::Config::default();
     config.baudrate = 32_150; // MIDI baud rate
-    let uart = defmt::unwrap!(usart::Uart::new_half_duplex_on_rx(
+    let uart = defmt::unwrap!(usart::UartRx::new(
         pod_p.midi_jack.usart,
         pod_p.midi_jack.pin,
         p.DMA2_CH2,
-        p.DMA2_CH3,
         Irqs,
         config,
-        usart::HalfDuplexReadback::Readback,
     ));
     spawner.must_spawn(midi_task(uart));
 }
@@ -254,14 +251,7 @@ const BUFFER_SIZE: usize = 1;
 static RX_BUFFER: GroundedArrayCell<u8, BUFFER_SIZE> = GroundedArrayCell::uninit();
 
 #[embassy_executor::task]
-pub async fn midi_task(usart: Uart<'static, Async>) {
-    let (_tx, rx) = usart.split();
-    rx_task(rx).await;
-    // todo:
-    // tx_task(tx).await;
-}
-
-pub async fn rx_task(mut rx: UartRx<'static, Async>) -> ! {
+pub async fn midi_task(mut rx: UartRx<'static, Async>) -> ! {
     // Create a MIDI stream to handle incoming MIDI messages
     let mut midi_stream = MidiStream::new();
 
